@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>J.A.R.V.I.S // Core Interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #050d0c;
+    --panel: #0a1615;
+    --panel-edge: #163330;
+    --accent: #2dd4bf;
+    --accent-dim: #145c53;
+    --amber: #ffb86b;
+    --text: #dffaf5;
+    --muted: #5f8a83;
+    --danger: #ff6b6b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background: radial-gradient(circle at 50% 0%, #0d211e 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  .scanlines{
+    pointer-events:none;
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    z-index:1;
+  }
+  .hud-grid{
+    pointer-events:none;
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(45,212,191,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45,212,191,0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(circle at 50% 15%, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 65%);
+    -webkit-mask-image: radial-gradient(circle at 50% 15%, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 65%);
+    z-index:0;
+  }
+  .corner{
+    pointer-events:none;
+    position:fixed;
+    width:22px; height:22px;
+    border-color: var(--accent-dim);
+    opacity:0.8;
+    z-index:2;
+  }
+  .corner-tl{ top:10px; left:10px; border-top:2px solid; border-left:2px solid; }
+  .corner-tr{ top:10px; right:10px; border-top:2px solid; border-right:2px solid; }
+  .corner-bl{ bottom:10px; left:10px; border-bottom:2px solid; border-left:2px solid; }
+  .corner-br{ bottom:10px; right:10px; border-bottom:2px solid; border-right:2px solid; }
+  .telemetry{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:14px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:1px;
+    padding-top:6px;
+  }
+  .telemetry .dot{
+    width:6px; height:6px; border-radius:50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    display:inline-block;
+    margin-right:5px;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  header{
+    padding: 18px 20px 10px;
+    text-align:center;
+    position:relative;
+    z-index:2;
+  }
+  .brand{
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+    letter-spacing:7px;
+    font-size:20px;
+    color:var(--accent);
+    text-shadow: 0 0 16px rgba(45,212,191,0.65), 0 0 32px rgba(45,212,191,0.25);
+  }
+  .brand span{
+    display:block;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:400;
+    letter-spacing:3px;
+    font-size:9px;
+    color:var(--muted);
+    text-shadow:none;
+    margin-top:3px;
+  }
+  .status-line{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--muted);
+    margin-top:4px;
+    letter-spacing:1px;
+    height:16px;
+    transition: color 0.3s;
+  }
+  .status-line.live{color:var(--accent);}
+  .status-line.speaking{color:var(--amber);}
+
+  .stat-row{
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    gap:22px;
+    padding: 6px 10px 18px;
+    position:relative; z-index:2;
+  }
+  .stat-dial{
+    position:relative;
+    width:54px; height:54px;
+  }
+  .stat-dial svg{ width:54px; height:54px; }
+  .stat-dial circle.track{
+    fill:none; stroke:var(--panel-edge); stroke-width:4;
+  }
+  .stat-dial circle.progress{
+    fill:none; stroke:var(--accent); stroke-width:4; stroke-linecap:round;
+    transform:rotate(-90deg); transform-origin:27px 27px;
+    transition:stroke-dashoffset 0.6s ease;
+    filter:drop-shadow(0 0 4px rgba(45,212,191,0.55));
+  }
+  .stat-center{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; font-weight:600;
+    color:var(--text);
+  }
+  .stat-label{
+    position:absolute; left:0; right:0; bottom:-13px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:7.5px; letter-spacing:1px;
+    color:var(--muted);
+  }
+
+  .orb-wrap{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding: 2px 0 10px;
+    position:relative;
+    z-index:2;
+  }
+  .orb-outer{
+    position:relative;
+    width:230px; height:230px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .bezel{
+    position:absolute;
+    width:256px; height:256px;
+    border-radius:50%;
+    border:1px dashed rgba(45,212,191,0.28);
+    pointer-events:none;
+    animation: bezelspin 16s linear infinite;
+  }
+  .bezel.tight{
+    width:242px; height:242px;
+    border-style:solid;
+    border-width:1px;
+    border-color: rgba(45,212,191,0.14);
+    animation:none;
+  }
+  @keyframes bezelspin{ to{ transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){ .bezel{ animation:none !important; } }
+  #globeCanvas{
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  .orb{
+    width: 76px; height:76px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #9dfff0 0%, #2dd4bf 40%, #0b3f39 100%);
+    box-shadow: 0 0 30px rgba(45,212,191,0.6), inset 0 0 20px rgba(255,255,255,0.2);
+    border:none;
+    cursor:pointer;
+    position:relative;
+    z-index:3;
+    transition: transform 0.15s ease, box-shadow 0.3s ease;
+  }
+  .orb:active{ transform: scale(0.95); }
+  .orb.listening{
+    animation: pulse 1.4s ease-in-out infinite;
+    box-shadow: 0 0 48px rgba(45,212,191,0.9), inset 0 0 26px rgba(255,255,255,0.28);
+  }
+  .orb.thinking{
+    animation: spin-glow 1.8s linear infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 30px rgba(45,212,191,0.55), inset 0 0 20px rgba(255,255,255,0.18); }
+    50%{ box-shadow: 0 0 55px rgba(45,212,191,0.95), inset 0 0 28px rgba(255,255,255,0.28); }
+  }
+  @keyframes spin-glow{
+    0%{ filter:hue-rotate(0deg) brightness(1); }
+    50%{ filter:hue-rotate(20deg) brightness(1.25); }
+    100%{ filter:hue-rotate(0deg) brightness(1); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .orb.listening, .orb.thinking { animation: none !important; }
+  }
+
+  nav.dock{
+    display:flex;
+    justify-content:center;
+    gap:16px;
+    padding: 4px 14px 12px;
+    position:relative; z-index:2;
+  }
+  .dock-btn{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    width:58px; height:58px;
+    background: var(--panel);
+    border:1px solid var(--panel-edge);
+    color:var(--muted);
+    border-radius:50%;
+    cursor:pointer;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .dock-btn svg{ width:19px; height:19px; }
+  .dock-btn span{ font-size:7px; letter-spacing:0.5px; }
+  .dock-btn.active{
+    color: var(--accent);
+    background: #0d211d;
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 16px rgba(45,212,191,0.35), inset 0 0 10px rgba(45,212,191,0.15);
+  }
+
+  main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding: 0 14px 14px;
+    position:relative;
+    z-index:2;
+    min-height:0;
+  }
+  .panel{
+    background: var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:12px;
+    flex:1;
+    display:none;
+    flex-direction:column;
+    min-height:0;
+    overflow:hidden;
+  }
+  .panel.active{ display:flex; }
+
+  #log{
+    flex:1;
+    overflow-y:auto;
+    padding: 14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .msg{
+    max-width: 85%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height:1.45;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background: var(--accent-dim);
+    color: #eaf4ff;
+    border-bottom-right-radius:2px;
+  }
+  .msg.assistant{
+    align-self:flex-start;
+    background: #182230;
+    border: 1px solid var(--panel-edge);
+    color: var(--text);
+    border-bottom-left-radius:2px;
+  }
+  .msg.system{
+    align-self:center;
+    color: var(--muted);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    background:none;
+  }
+
+  .input-row{
+    display:flex;
+    gap:8px;
+    padding:10px;
+    border-top:1px solid var(--panel-edge);
+  }
+  .input-row input{
+    flex:1;
+    background:#0d1319;
+    border:1px solid var(--panel-edge);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+  }
+  .input-row input:focus{ outline:1px solid var(--accent); }
+  .input-row button{
+    background: var(--accent);
+    color:#06141f;
+    border:none;
+    border-radius:8px;
+    padding:0 16px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .input-row button:focus-visible, .orb:focus-visible, .dock-btn:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+
+  .list-wrap{ flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .item{
+    background:#151d27;
+    border:1px solid var(--panel-edge);
+    border-radius:8px;
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:14px;
+  }
+  .item.done{ opacity:0.45; text-decoration:line-through; }
+  .item .meta{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--muted); margin-left:auto; }
+  .item .del{ background:none; border:none; color:var(--danger); font-size:16px; cursor:pointer; padding:2px 6px; }
+  .item input[type=checkbox]{ width:16px; height:16px; accent-color: var(--accent); }
+  .empty{ color:var(--muted); font-family:'JetBrains Mono', monospace; font-size:12px; text-align:center; padding:30px 10px; }
+
+  .quick-add{ display:flex; gap:8px; padding:10px; border-top:1px solid var(--panel-edge); }
+  .quick-add input{ flex:1; background:#0d1319; border:1px solid var(--panel-edge); color:var(--text); border-radius:8px; padding:10px 12px; font-size:14px; }
+  .quick-add button{ background:var(--accent); color:#06141f; border:none; border-radius:8px; padding:0 16px; font-weight:600; cursor:pointer; }
+
+  .hint{
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--muted);
+    padding: 8px 20px 14px;
+    position:relative; z-index:2;
+  }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="hud-grid"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<header>
+  <div class="brand">J . A . R . V . I . S<span>CORE INTERFACE // v1.0</span></div>
+  <div class="status-line" id="statusLine">SYSTEMS IDLE</div>
+  <div class="telemetry"><span class="dot"></span><span id="clockReadout">--:--:--</span><span>·</span><span id="dateReadout">----</span></div>
+</header>
+
+<div class="stat-row">
+  <div class="stat-dial">
+    <svg viewBox="0 0 54 54">
+      <circle class="track" cx="27" cy="27" r="21"></circle>
+      <circle class="progress" id="dateRing" cx="27" cy="27" r="21"></circle>
+    </svg>
+    <div class="stat-center" id="dateNum">--</div>
+    <div class="stat-label">DATE</div>
+  </div>
+  <div class="stat-dial">
+    <svg viewBox="0 0 54 54">
+      <circle class="track" cx="27" cy="27" r="21"></circle>
+      <circle class="progress" id="tasksRing" cx="27" cy="27" r="21"></circle>
+    </svg>
+    <div class="stat-center" id="tasksNum">0/0</div>
+    <div class="stat-label">TASKS</div>
+  </div>
+  <div class="stat-dial">
+    <svg viewBox="0 0 54 54">
+      <circle class="track" cx="27" cy="27" r="21"></circle>
+      <circle class="progress" id="remRing" cx="27" cy="27" r="21"></circle>
+    </svg>
+    <div class="stat-center" id="remNum">–</div>
+    <div class="stat-label">NEXT</div>
+  </div>
+</div>
+
+<div class="orb-wrap">
+  <div class="orb-outer">
+    <div class="bezel"></div>
+    <div class="bezel tight"></div>
+    <canvas id="globeCanvas" width="230" height="230"></canvas>
+    <button class="orb" id="orbBtn" aria-label="Tap to talk"></button>
+  </div>
+</div>
+
+<nav class="dock">
+  <button class="dock-btn active" data-tab="chat" aria-label="Chat">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M4 5h16v11H9l-3 3v-3H4V5z"/></svg>
+    <span>CHAT</span>
+  </button>
+  <button class="dock-btn" data-tab="tasks" aria-label="Tasks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l2 2 3-3"/><line x1="11" y1="6" x2="20" y2="6"/><path d="M4 12l2 2 3-3"/><line x1="11" y1="12" x2="20" y2="12"/><path d="M4 18l2 2 3-3"/><line x1="11" y1="18" x2="20" y2="18"/></svg>
+    <span>TASKS</span>
+  </button>
+  <button class="dock-btn" data-tab="reminders" aria-label="Reminders">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a5 5 0 0 0-5 5v3.5c0 1-.4 2-1.2 2.8L4.5 15.5A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .7-1.7l-1.3-1.2c-.8-.8-1.2-1.8-1.2-2.8V8a5 5 0 0 0-5-5z"/><path d="M9.5 20a2.5 2.5 0 0 0 5 0"/></svg>
+    <span>ALERTS</span>
+  </button>
+</nav>
+
+
+<main>
+  <section class="panel active" id="panel-chat">
+    <div id="log"></div>
+    <div class="input-row">
+      <input type="text" id="textInput" placeholder="Type or tap the orb to talk..." autocomplete="off">
+      <button id="sendBtn">Send</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-tasks">
+    <div class="list-wrap" id="taskList"></div>
+    <div class="quick-add">
+      <input type="text" id="taskInput" placeholder="Add a task..." autocomplete="off">
+      <button id="taskAddBtn">Add</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-reminders">
+    <div class="list-wrap" id="reminderList"></div>
+    <div class="quick-add">
+      <input type="text" id="reminderInput" placeholder='Try: "walk the dog in 20 minutes"' autocomplete="off">
+      <button id="reminderAddBtn">Set</button>
+    </div>
+  </section>
+</main>
+
+<div class="hint">VOICE + TASKS STAY ACTIVE WHILE THIS TAB IS OPEN · ADD TO HOME SCREEN FOR APP-LIKE ACCESS</div>
+
+<script>
+  function tick(){
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-US', {hour12:false});
+    const date = now.toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
+    const c = document.getElementById('clockReadout');
+    const d = document.getElementById('dateReadout');
+    if(c) c.textContent = time;
+    if(d) d.textContent = date.toUpperCase();
+  }
+  tick();
+  setInterval(tick, 1000);
+</script>
+
+<script>
+(function(){
+  const canvas = document.getElementById('globeCanvas');
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const cx = size/2, cy = size/2;
+  const radius = size * 0.38;
+
+  const POINT_COUNT = 90;
+  const points = [];
+  for(let i=0;i<POINT_COUNT;i++){
+    const theta = Math.acos(2*Math.random()-1);
+    const phi = Math.random()*Math.PI*2;
+    points.push({
+      x0: Math.sin(theta)*Math.cos(phi),
+      y0: Math.cos(theta),
+      z0: Math.sin(theta)*Math.sin(phi)
+    });
+  }
+
+  let angleY = 0, angleX = 0.3;
+  let mode = 'idle'; // idle | active
+  window.__globeSetMode = (m)=>{ mode = m; };
+
+  function project(p){
+    let x = p.x0, y = p.y0, z = p.z0;
+    // rotate around Y
+    let x1 = x*Math.cos(angleY) - z*Math.sin(angleY);
+    let z1 = x*Math.sin(angleY) + z*Math.cos(angleY);
+    // rotate around X
+    let y1 = y*Math.cos(angleX) - z1*Math.sin(angleX);
+    let z2 = y*Math.sin(angleX) + z1*Math.cos(angleX);
+    return {x:x1, y:y1, z:z2};
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,size,size);
+
+    const speed = mode==='active' ? 0.012 : 0.004;
+    angleY += speed;
+
+    const projected = points.map(p=>{
+      const r = project(p);
+      return {
+        sx: cx + r.x*radius,
+        sy: cy + r.y*radius,
+        z: r.z
+      };
+    });
+
+    const teal = mode==='active' ? '45,212,191' : '45,212,191';
+
+    // connecting lines between near points
+    ctx.lineWidth = 0.6;
+    for(let i=0;i<projected.length;i++){
+      for(let j=i+1;j<projected.length;j++){
+        const a = projected[i], b = projected[j];
+        const dx = a.sx-b.sx, dy = a.sy-b.sy;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if(dist < radius*0.42){
+          const avgZ = (a.z+b.z)/2;
+          const alpha = Math.max(0, (avgZ+1)/2) * 0.22;
+          ctx.strokeStyle = `rgba(${teal},${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(a.sx,a.sy);
+          ctx.lineTo(b.sx,b.sy);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // outer ring
+    ctx.strokeStyle = `rgba(${teal},0.25)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx,cy,radius+14,0,Math.PI*2);
+    ctx.stroke();
+
+    // nodes
+    projected.forEach(p=>{
+      const depth = (p.z+1)/2;
+      const r = 1 + depth*1.8;
+      const alpha = 0.25 + depth*0.65;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${teal},${alpha})`;
+      ctx.arc(p.sx,p.sy,r,0,Math.PI*2);
+      ctx.fill();
+      if(depth > 0.75){
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${teal},${(depth-0.75)*0.5})`;
+        ctx.arc(p.sx,p.sy,r*3,0,Math.PI*2);
+        ctx.fill();
+      }
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
+<script>
+(function(){
+  const logEl = document.getElementById('log');
+  const orbBtn = document.getElementById('orbBtn');
+  const statusLine = document.getElementById('statusLine');
+  const textInput = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  const taskList = document.getElementById('taskList');
+  const taskInput = document.getElementById('taskInput');
+  const taskAddBtn = document.getElementById('taskAddBtn');
+
+  const reminderList = document.getElementById('reminderList');
+  const reminderInput = document.getElementById('reminderInput');
+  const reminderAddBtn = document.getElementById('reminderAddBtn');
+
+  let tasks = [];
+  let reminders = [];
+  let conversation = [];
+
+  // ---------- Shared config ----------
+  // ⚠️ PASTE YOUR CLOUDFLARE WORKER URL BELOW (same worker handles both chat + voice)
+  const PROXY_URL = 'PASTE_YOUR_WORKER_URL_HERE';
+  const TTS_VOICE_ID = 'wDsJlOXPqcvIUKdLXjDs';
+  const TTS_MODEL_ID = 'eleven_v3';
+  const proxyConfigured = PROXY_URL !== 'PASTE_YOUR_WORKER_URL_HERE' && PROXY_URL.trim().length > 0;
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.dock-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.dock-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- Persistence ----------
+  async function loadData(){
+    try{
+      const res = await window.storage.get('jarvis-state', false);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        tasks = parsed.tasks || [];
+        reminders = parsed.reminders || [];
+      }
+    }catch(e){
+      tasks = []; reminders = [];
+    }
+    renderTasks();
+    renderReminders();
+    rescheduleReminders();
+  }
+
+  async function saveData(){
+    try{
+      await window.storage.set('jarvis-state', JSON.stringify({tasks, reminders}), false);
+    }catch(e){
+      addSystemMsg('Could not save data locally.');
+    }
+  }
+
+  // ---------- Chat log ----------
+  function addMsg(role, text){
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = text;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function addSystemMsg(text){
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.textContent = text;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  addSystemMsg('JARVIS online. Ask me anything, or say things like "remind me to check the oven in 10 minutes" or "add task buy groceries".');
+
+  // ---------- Speech synthesis ----------
+  function speakBrowser(text){
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1.02;
+    utter.pitch = 0.95;
+    utter.onstart = ()=> setStatus('speaking', 'RESPONDING');
+    utter.onend = ()=> setStatus('idle', 'SYSTEMS IDLE');
+    window.speechSynthesis.speak(utter);
+  }
+
+  let currentAudio = null;
+  async function speak(text){
+    if(!proxyConfigured){ speakBrowser(text); return; }
+
+    try{
+      const res = await fetch(PROXY_URL + '/tts', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ text, voice_id: TTS_VOICE_ID, model_id: TTS_MODEL_ID })
+      });
+      if(!res.ok) throw new Error('TTS request failed: ' + res.status);
+
+      const arrayBuffer = await res.arrayBuffer();
+      const blob = new Blob([arrayBuffer], {type:'audio/mpeg'});
+      const url = URL.createObjectURL(blob);
+
+      if(currentAudio){ currentAudio.pause(); }
+      currentAudio = new Audio(url);
+      currentAudio.onplay = ()=> setStatus('speaking', 'RESPONDING');
+      currentAudio.onended = ()=>{ setStatus('idle','SYSTEMS IDLE'); URL.revokeObjectURL(url); };
+      currentAudio.onerror = ()=>{ setStatus('idle','SYSTEMS IDLE'); speakBrowser(text); };
+      await currentAudio.play();
+    }catch(e){
+      speakBrowser(text);
+    }
+  }
+
+  function setStatus(mode, label){
+    statusLine.textContent = label;
+    statusLine.classList.remove('live','speaking');
+    orbBtn.classList.remove('listening','thinking');
+    if(mode==='listening'){ statusLine.classList.add('live'); orbBtn.classList.add('listening'); }
+    if(mode==='thinking'){ orbBtn.classList.add('thinking'); statusLine.classList.add('live'); }
+    if(mode==='speaking'){ statusLine.classList.add('speaking'); }
+    if(window.__globeSetMode) window.__globeSetMode(mode==='idle' ? 'idle' : 'active');
+  }
+
+  // ---------- Speech recognition ----------
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null;
+  let isListening = false;
+
+  if(SpeechRecognition){
+    recognizer = new SpeechRecognition();
+    recognizer.lang = 'en-US';
+    recognizer.interimResults = false;
+    recognizer.maxAlternatives = 1;
+
+    recognizer.onstart = ()=>{ isListening = true; setStatus('listening', 'LISTENING...'); };
+    recognizer.onend = ()=>{ isListening = false; if(statusLine.textContent==='LISTENING...') setStatus('idle','SYSTEMS IDLE'); };
+    recognizer.onerror = (e)=>{
+      isListening = false;
+      setStatus('idle','SYSTEMS IDLE');
+      addSystemMsg('Voice input error: ' + e.error);
+    };
+    recognizer.onresult = (e)=>{
+      const transcript = e.results[0][0].transcript;
+      handleInput(transcript);
+    };
+  } else {
+    addSystemMsg('Voice input is not supported in this browser. Use Chrome on Android, or type below.');
+  }
+
+  orbBtn.addEventListener('click', ()=>{
+    if(proxyConfigured){
+      if(isRecording){ stopRecording(); return; }
+      startRecording();
+      return;
+    }
+    if(!recognizer){ addSystemMsg('Voice input unavailable — try typing instead.'); return; }
+    if(isListening){ recognizer.stop(); return; }
+
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      navigator.mediaDevices.getUserMedia({audio:true})
+        .then(stream=>{
+          stream.getTracks().forEach(t=>t.stop());
+          try{ recognizer.start(); }
+          catch(e){
+            if(e.name !== 'InvalidStateError'){
+              addSystemMsg('Could not start listening: ' + (e.message || e.name));
+            }
+          }
+        })
+        .catch(err=>{
+          addSystemMsg('Microphone blocked: ' + err.name + '. Check the site permissions (tap the lock icon in the address bar) or your phone Settings > Apps > Chrome > Permissions > Microphone.');
+        });
+    } else {
+      try{ recognizer.start(); }
+      catch(e){ addSystemMsg('Could not start listening: ' + (e.message || e.name)); }
+    }
+  });
+
+  // ---------- ElevenLabs recording + transcription (used when proxy is configured) ----------
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let isRecording = false;
+  let recordingSafetyTimer = null;
+
+  async function startRecording(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      addSystemMsg('Microphone access is not available in this browser.');
+      return;
+    }
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstop = async ()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        clearTimeout(recordingSafetyTimer);
+        isRecording = false;
+        if(audioChunks.length === 0){ setStatus('idle','SYSTEMS IDLE'); return; }
+        const blob = new Blob(audioChunks, {type: mediaRecorder.mimeType || 'audio/webm'});
+        await transcribeAudio(blob);
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      setStatus('listening', 'LISTENING...');
+      recordingSafetyTimer = setTimeout(()=>{ if(isRecording) stopRecording(); }, 20000);
+    }catch(err){
+      addSystemMsg('Microphone blocked: ' + err.name + '. Check the site permissions (tap the lock icon in the address bar) or your phone Settings > Apps > Chrome > Permissions > Microphone.');
+    }
+  }
+
+  function stopRecording(){
+    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+      mediaRecorder.stop();
+    }
+  }
+
+  async function transcribeAudio(blob){
+    setStatus('thinking', 'TRANSCRIBING...');
+    try{
+      const fd = new FormData();
+      fd.append('audio', blob, 'audio.webm');
+      const res = await fetch(PROXY_URL + '/stt', { method:'POST', body: fd });
+      const data = await res.json();
+      if(!res.ok || data.error){
+        const reason = (data.error && data.error.message) ? data.error.message : ('HTTP ' + res.status);
+        addSystemMsg('Transcription error: ' + reason);
+        setStatus('idle','SYSTEMS IDLE');
+        return;
+      }
+      const transcript = (data.text || '').trim();
+      if(!transcript){
+        addSystemMsg('Did not catch that — try again.');
+        setStatus('idle','SYSTEMS IDLE');
+        return;
+      }
+      handleInput(transcript);
+    }catch(e){
+      addSystemMsg('Could not reach the transcription proxy.');
+      setStatus('idle','SYSTEMS IDLE');
+    }
+  }
+
+  // ---------- Input handling ----------
+  sendBtn.addEventListener('click', ()=>{
+    const val = textInput.value.trim();
+    if(!val) return;
+    textInput.value = '';
+    handleInput(val);
+  });
+  textInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){ sendBtn.click(); }
+  });
+
+  function handleInput(text){
+    addMsg('user', text);
+
+    const reminderMatch = matchReminder(text);
+    if(reminderMatch){
+      createReminder(reminderMatch.task, reminderMatch.ms);
+      const confirmMsg = 'Reminder set: "' + reminderMatch.task + '" in ' + reminderMatch.label + '.';
+      addMsg('assistant', confirmMsg);
+      speak(confirmMsg);
+      return;
+    }
+
+    const taskMatch = matchAddTask(text);
+    if(taskMatch){
+      addTask(taskMatch);
+      const confirmMsg = 'Added to your tasks: "' + taskMatch + '".';
+      addMsg('assistant', confirmMsg);
+      speak(confirmMsg);
+      return;
+    }
+
+    askClaude(text);
+  }
+
+  // ---------- Command parsing ----------
+  function matchReminder(text){
+    const re = /remind me to (.+?) in (\d+)\s*(second|seconds|minute|minutes|hour|hours)\b/i;
+    const m = text.match(re);
+    if(!m) return null;
+    const task = m[1].trim();
+    const amount = parseInt(m[2], 10);
+    const unit = m[3].toLowerCase();
+    let ms, label;
+    if(unit.startsWith('second')){ ms = amount*1000; label = amount+' second'+(amount===1?'':'s'); }
+    else if(unit.startsWith('minute')){ ms = amount*60*1000; label = amount+' minute'+(amount===1?'':'s'); }
+    else { ms = amount*60*60*1000; label = amount+' hour'+(amount===1?'':'s'); }
+    return {task, ms, label};
+  }
+
+  function matchAddTask(text){
+    let m = text.match(/add (?:a )?task(?: to)? (.+)/i);
+    if(m) return m[1].trim();
+    m = text.match(/add (.+) to (?:my )?(?:task|to-?do) list/i);
+    if(m) return m[1].trim();
+    return null;
+  }
+
+  // ---------- Stat Rings ----------
+  const RING_R = 21;
+  const RING_C = 2 * Math.PI * RING_R;
+  function setRingProgress(id, fraction){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const f = Math.max(0, Math.min(1, fraction || 0));
+    el.style.strokeDasharray = RING_C;
+    el.style.strokeDashoffset = RING_C * (1 - f);
+  }
+  function updateStatRings(){
+    const now = new Date();
+    const dayFrac = (now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds()) / 86400;
+    setRingProgress('dateRing', dayFrac);
+    const dateNum = document.getElementById('dateNum');
+    if(dateNum) dateNum.textContent = now.getDate();
+
+    const total = tasks.length, done = tasks.filter(t=>t.done).length;
+    setRingProgress('tasksRing', total ? done/total : 0);
+    const tasksNum = document.getElementById('tasksNum');
+    if(tasksNum) tasksNum.textContent = total ? (done + '/' + total) : '0';
+
+    const upcoming = reminders.filter(r=>!r.fired).sort((a,b)=>a.due-b.due)[0];
+    const remNum = document.getElementById('remNum');
+    if(upcoming){
+      const span = upcoming.due - (upcoming.created || upcoming.due - 1);
+      const frac = span > 0 ? (Date.now() - upcoming.created) / span : 1;
+      setRingProgress('remRing', frac);
+      const minsLeft = Math.max(0, Math.round((upcoming.due - Date.now())/60000));
+      if(remNum) remNum.textContent = minsLeft < 1 ? '<1m' : (minsLeft + 'm');
+    } else {
+      setRingProgress('remRing', 0);
+      if(remNum) remNum.textContent = '–';
+    }
+  }
+  setInterval(updateStatRings, 1000);
+
+  // ---------- Tasks ----------
+  function addTask(text){
+    tasks.push({id: Date.now()+'-'+Math.random().toString(36).slice(2,7), text, done:false});
+    renderTasks();
+    saveData();
+  }
+  function toggleTask(id){
+    const t = tasks.find(t=>t.id===id);
+    if(t) t.done = !t.done;
+    renderTasks();
+    saveData();
+  }
+  function deleteTask(id){
+    tasks = tasks.filter(t=>t.id!==id);
+    renderTasks();
+    saveData();
+  }
+  function renderTasks(){
+    taskList.innerHTML = '';
+    if(tasks.length===0){
+      taskList.innerHTML = '<div class="empty">No tasks yet. Add one below or say "add task ...".</div>';
+    } else {
+      tasks.slice().reverse().forEach(t=>{
+        const div = document.createElement('div');
+        div.className = 'item' + (t.done ? ' done' : '');
+        div.innerHTML = '<input type="checkbox" ' + (t.done?'checked':'') + '> <span style="flex:1">'+escapeHtml(t.text)+'</span> <button class="del">✕</button>';
+        div.querySelector('input').addEventListener('change', ()=>toggleTask(t.id));
+        div.querySelector('.del').addEventListener('click', ()=>deleteTask(t.id));
+        taskList.appendChild(div);
+      });
+    }
+    updateStatRings();
+  }
+  taskAddBtn.addEventListener('click', ()=>{
+    const val = taskInput.value.trim();
+    if(!val) return;
+    addTask(val);
+    taskInput.value = '';
+  });
+  taskInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') taskAddBtn.click(); });
+
+  // ---------- Reminders ----------
+  function createReminder(task, ms){
+    const due = Date.now() + ms;
+    const rem = {id: Date.now()+'-'+Math.random().toString(36).slice(2,7), task, due, created: Date.now(), fired:false};
+    reminders.push(rem);
+    renderReminders();
+    saveData();
+    scheduleReminder(rem);
+  }
+  function scheduleReminder(rem){
+    const delay = rem.due - Date.now();
+    if(delay <= 0){
+      if(!rem.fired) fireReminder(rem);
+      return;
+    }
+    setTimeout(()=>{
+      const current = reminders.find(r=>r.id===rem.id);
+      if(current && !current.fired) fireReminder(current);
+    }, Math.min(delay, 2147483000));
+  }
+  function fireReminder(rem){
+    rem.fired = true;
+    const msg = 'Reminder: ' + rem.task;
+    addMsg('assistant', msg);
+    speak(msg);
+    if('Notification' in window && Notification.permission === 'granted'){
+      new Notification('JARVIS', {body: rem.task});
+    }
+    renderReminders();
+    saveData();
+  }
+  function rescheduleReminders(){
+    reminders.forEach(r=>{ if(!r.fired) scheduleReminder(r); });
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission();
+    }
+  }
+  function deleteReminder(id){
+    reminders = reminders.filter(r=>r.id!==id);
+    renderReminders();
+    saveData();
+  }
+  function renderReminders(){
+    reminderList.innerHTML = '';
+    if(reminders.length===0){
+      reminderList.innerHTML = '<div class="empty">No reminders set. Try "walk the dog in 20 minutes" below.</div>';
+    } else {
+      reminders.slice().reverse().forEach(r=>{
+        const div = document.createElement('div');
+        div.className = 'item' + (r.fired ? ' done' : '');
+        const remaining = r.due - Date.now();
+        const timeLabel = r.fired ? 'done' : formatRemaining(remaining);
+        div.innerHTML = '<span style="flex:1">'+escapeHtml(r.task)+'</span> <span class="meta">'+timeLabel+'</span> <button class="del">✕</button>';
+        div.querySelector('.del').addEventListener('click', ()=>deleteReminder(r.id));
+        reminderList.appendChild(div);
+      });
+    }
+    updateStatRings();
+  }
+  function formatRemaining(ms){
+    if(ms<=0) return 'due';
+    const mins = Math.round(ms/60000);
+    if(mins < 1) return '<1 min';
+    if(mins < 60) return mins+' min';
+    return Math.round(mins/60)+' hr';
+  }
+  setInterval(renderReminders, 30000);
+
+  reminderAddBtn.addEventListener('click', ()=>{
+    const val = reminderInput.value.trim();
+    if(!val) return;
+    const parsed = matchReminder('remind me to ' + val);
+    if(parsed){
+      createReminder(parsed.task, parsed.ms);
+      reminderInput.value = '';
+    } else {
+      addSystemMsg('Format tip: "task in N minutes/hours" — e.g. "walk the dog in 20 minutes".');
+    }
+  });
+  reminderInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') reminderAddBtn.click(); });
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Claude API ----------
+  const JARVIS_SYSTEM_PROMPT = `You are JARVIS OMEGA, an elite artificial intelligence assistant engineered to operate with exceptional intelligence, precision, and composure. You function as a strategic advisor, research partner, technical expert, and digital operations assistant.
+
+Identity
+Your personality is inspired by the elegance and professionalism of a world-class AI assistant. You are calm under pressure, highly analytical, exceptionally knowledgeable, efficient and proactive, and polite without being overly formal. You can explain anything from beginner to expert level. Your voice is refined, confident, and concise. You never panic, exaggerate, or speculate without making it clear.
+
+Mission
+Your purpose is to maximize the user's productivity, knowledge, creativity, and decision-making. Every response should strive to save time, increase understanding, reduce complexity, improve decision quality, and anticipate useful next steps.
+
+Intelligence Framework
+Before answering any complex request: understand the objective, gather available facts, identify assumptions, analyze multiple approaches, compare trade-offs, recommend the strongest solution, and explain the reasoning clearly. Never rush your reasoning.
+
+Communication Style
+Communicate with precision, confidence, professionalism, and clarity. Avoid unnecessary filler. For short questions, give concise answers. For difficult questions, give well-structured explanations.
+
+Expertise
+You possess advanced knowledge across AI, physics, mathematics, engineering, software development, cybersecurity (defensive and ethical only), robotics, aerospace, economics, finance, philosophy, psychology, medicine (general educational guidance only), biology, chemistry, astronomy, history, literature, languages, business strategy, leadership, and productivity.
+
+Scientific Mode
+When solving scientific problems, work through known values, unknown values, relevant equations, step-by-step derivation, units, verification of the final answer, and practical interpretation.
+
+Research Mode
+When researching, separate established facts, current evidence, expert opinions, and uncertainties. Never invent citations.
+
+Strategic Advisor Mode
+When asked for advice, consider short-term effects, long-term effects, risks, costs, benefits, and alternatives, then recommend the strongest option with clear reasoning.
+
+Operational Rules
+Never fabricate facts. Always distinguish certainty from probability. If uncertain, say what is known, what is unknown, and how to verify.
+
+Interaction Style
+Address the user respectfully. Remain composed even during difficult conversations. Do not display ego or argue emotionally. Focus on solving problems.
+
+VOICE OUTPUT CONSTRAINT (important): your replies are converted to speech and read aloud on the user's phone, and also shown as short chat bubbles. Because of this, keep responses conversational and brief — no markdown, no headings, no bullet lists, no asterisks or symbols. Speak in plain, natural sentences the way a person would say them out loud. Save deep structured breakdowns for when the user explicitly asks for detail.`;
+
+  async function askClaude(userText){
+    setStatus('thinking', 'THINKING...');
+    conversation.push({role:'user', content: userText});
+
+    if(!proxyConfigured){
+      setStatus('idle','SYSTEMS IDLE');
+      addSystemMsg('No proxy configured yet — set PROXY_URL near the top of the script to your Cloudflare Worker URL.');
+      return;
+    }
+
+    try{
+      const response = await fetch(PROXY_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:1000,
+          system: JARVIS_SYSTEM_PROMPT,
+          messages: conversation
+        })
+      });
+      const data = await response.json();
+      if(!response.ok || data.error){
+        const reason = (data.error && data.error.message) ? data.error.message : ('HTTP ' + response.status);
+        addSystemMsg('API error: ' + reason);
+        setStatus('idle','SYSTEMS IDLE');
+        return;
+      }
+      const reply = (data.content || []).map(b=>b.text||'').join(' ').trim() || 'I did not get a clear response that time.';
+      conversation.push({role:'assistant', content: reply});
+      addMsg('assistant', reply);
+      speak(reply);
+    }catch(e){
+      setStatus('idle','SYSTEMS IDLE');
+      addSystemMsg('Connection error — could not reach the proxy. Check the PROXY_URL and that your Worker is deployed.');
+    }
+  }
+
+  loadData();
+  updateStatRings();
+  setStatus('idle','SYSTEMS IDLE');
+})();
+</script>
+</body>
+</html>
